@@ -1,0 +1,177 @@
+---
+title: "Calculoating Carbonate COMpoinents from CASco BAy Data Using seacarb"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(seacarb)
+library(magrittr)
+library(GGally)
+```
+
+#Loading the Data
+```{r}
+data.2015 <- read_excel("SMCC_deployment1_2015.xlsx", skip = 2, na = 'NaN',
+                       col_names = c("Year", "Month", "Day", "Hour", "Date",
+                                     "TEMP", "SALINITY", "CO2", "O2", "PH"),
+                       col_types = c('numeric', 'numeric', 'numeric', 'numeric',
+                                     'text', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric'))
+
+data.2016 <- read_excel("SMCC_deployment2_2016.xlsx", skip = 2, na = 'NaN',
+                       col_names = c("Year", "Month", "Day", "Hour", "Date",
+                                     "TEMP", "SALINITY", "CO2", "O2", "PH"),
+                       col_types = c('numeric', 'numeric', 'numeric', 'numeric',
+                                     'text', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric'))
+
+data.2017 <- read_excel("SMCC_deployment3_2017.xlsx", skip = 2, na = 'NaN',
+                       col_names = c("Year", "Month", "Day", "Hour", "Date",
+                                     "TEMP", "SALINITY", "CO2", "O2", "PH"),
+                       col_types = c('numeric', 'numeric', 'numeric', 'numeric',
+                                     'text', 'skip', 'numeric', 'numeric', 'numeric', 'numeric', 'numeric'))
+
+the.data <- data.2015 %>% bind_rows(data.2016) %>% bind_rows(data.2017)
+
+the.data %<>%
+  mutate(Date2 = as.Date(strptime(paste(Year,Month,Day), "%Y%m%d"))) %>%
+  mutate(DateTime = ISOdatetime(Year, Month, Day, Hour, 0, 0)) %>%
+  mutate(Month = factor(Month, levels = c(1,4,5,6,7,8,9,10,11,12), labels = c('January', 'April', 'May', 'June',  'July', 'August','September', 'October', 'November', 'December'))) %>%
+  mutate(TimeOfDay = cut(Hour,6, labels = c('Late Night', 'Early Morning', 'Morning',
+                                            'Afternoon', 'Evening', 'Night')))
+
+plot(the.data$PH~the.data$DateTime)
+rm(data.2015, data.2016, data.2017)
+```
+#Analyzing the Carbonate CHemistry System
+(Using default parameters -- which may not be appropriate here).  
+The carb function has a somewhat awkward UI, but it pulls together all the parts of the carbonate system, based on whichever two variables you have available (plus T and S).  Here's an example from the seacarb manual.
+```{r}
+data(seacarb_test_P0)
+data <- seacarb_test_P0
+carbd <- carb(flag=data$flag, var1=data$var1, var2=data$var2, S=data$S, T=data$T, P=data$P, Sit=data$Sit, Pt=data$Pt)
+
+#----------------------------------------------------------------------
+# Simple xy plot
+plot(carbd$pH,carbd$pCO2)
+
+rm(carbd, data, seacarb_test_P0)
+```
+
+Applying this to our data, we have the following.  the parameter "flag = 21 is for "pCO2 and pH given" as is the case here.  Temperature and salinity help determine the equilibrium constants that drive the calculation.
+```{r}
+complete.data <-  the.data[complete.cases(the.data),]
+carbsystem <- complete.data %$% carb(flag = 21, var1 = CO2, var2 = PH, S = SALINITY, T = TEMP, gas = 'standard')
+
+dat <- complete.data %>% select(Year, Month, Day, Hour, DateTime, Date2, TimeOfDay, O2) %>% bind_cols(select(carbsystem, c(-1)))
+
+rm(complete.data)
+```
+
+```{r}
+plt <- ggplot(dat) +
+  geom_point(aes(DateTime, OmegaAragonite, color = 'Omega Aragonite'), size = .5, alpha = 0.25) +
+  geom_point(aes(DateTime, OmegaCalcite, color = "Omega Calcite"), size = .5, alpha = 0.25) +
+  geom_hline(yintercept = 1.6, lty = 2, color = 'blue') +
+  annotate("text", x = as.POSIXct("2016/01/01"), y = 2, label = "Omega = 1.6",
+           hjust = 0, color = 'blue') +
+  geom_hline(yintercept = 1, lty = 2, color = 'black') +
+  annotate("text", x = as.POSIXct("2015/04/01"), y = 0.75, label = "Omega = 1", hjust = 0)
+plt
+```
+
+#Relationship betweeen Salinity and Calculated Alkalinity
+Something really different appears to have happened in 2007.
+
+```{r}
+plt <- ggplot(dat, aes(S, ALK)) + geom_point(aes(color = factor(Year)), alpha = 0.25)
+plt
+```
+It appears that there may be  correlations within years, but other things appear to dominate that relatively weak signal where slinity does not vary much. Looking at just two years, since 2017 is an apparent anomoly.
+
+```{r}
+plt <- filter(dat, Year != 2017) %>%
+  ggplot( aes(S, ALK)) +
+    geom_point(aes(color = factor(Year)), alpha = 0.25) +
+    geom_smooth(aes(color = factor(Year)), method = 'lm')
+plt
+```
+
+#Pairs Plot
+```{r}
+plt <- select(dat, O2, S, T, pH) %>% #, pCO2, ALK, OmegaAragonite) %>%
+  ggpairs()
+plt
+```
+
+That bimodal distribution of pH worries me
+```{r}
+plt <- select(dat, Year, O2, S, T, pH, pCO2, ALK, OmegaAragonite) %>%
+  mutate(Year = factor(Year)) %>%
+  ggpairs(tmp, columns = c(2:6),  mapping=ggplot2::aes(colour = Year, alpha = 0.1))
+plt
+```
+#Some other approaches to showing complex data.
+```{r}
+plt <- ggplot(dat, aes(S, ALK)) + stat_density_2d(aes(fill = ..level..), geom = "polygon", colour="white")
+plt
+```
+
+```{r}
+plt <- ggplot(dat, aes(S, ALK)) +
+  geom_point(aes(color = factor(Year)), alpha = 0.25) +
+               geom_density_2d(color = 'white')
+plt
+```
+
+```{r}
+plt <- ggplot(dat, aes(DateTime, ALK)) + geom_point(alpha = 0.1)
+plt
+```
+
+#Plotting up by Julian Day
+```{r}
+tmp <- the.data %>% mutate(jday = julianDay(DateTime)-
+                                     julianDay(ISOdatetime(year = Year,
+                                                           month = 1,
+                                                           day = 1,
+                                                           hour=0,
+                                                           min=0,
+                                                           sec=0)))
+plt <- ggplot(tmp, aes(jday, CO2)) + geom_point(aes(color = factor(Year)), alpha = .2)
+
+plt
+
+```
+
+```{r}
+plt <- ggplot(tmp, aes(jday, CO2)) + geom_smooth(aes(color = factor(Year)))
+
+plt
+
+```
+```{r}
+plt <- ggplot(tmp, aes(jday, log(CO2)) + geom_hex() + scale_fill_distiller(palette=4, direction=-1) + geom_smooth(method = 'lm')
+
+plt
+
+```
+
+
+
+```{r}
+plt <- ggplot(tmp, aes(jday, PH)) + geom_smooth(aes(color = factor(Year)))
+
+plt
+
+```
+
+
+
+
+
+
+
+
+
+
