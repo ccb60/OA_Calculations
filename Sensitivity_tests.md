@@ -4,11 +4,12 @@ Curtis C. Bohlen
 
   - [Introduction](#introduction)
   - [Load Libraries](#load-libraries)
-  - [Systematic Exploration of error](#systematic-exploration-of-error)
+  - [Systematic Exploration of Error](#systematic-exploration-of-error)
       - [Create Mock Data](#create-mock-data)
       - [Calculate Carbonate
         Parameters](#calculate-carbonate-parameters)
-      - [Graphical Display](#graphical-display)
+      - [Graphical Display of Omega as a function of pH and
+        PCO<sub>2</sub>](#graphical-display-of-omega-as-a-function-of-ph-and-pco2)
   - [Varying Temperature and
     Salinity](#varying-temperature-and-salinity)
 
@@ -21,7 +22,7 @@ Curtis C. Bohlen
 Friends of Casco Bay uses less accurate electrochemical pH sensors,
 rather than the more expensive Field Effect Transistor sensors or
 colorimetric pH technology. As a result, they measure pH in NBS pH
-Scale, not on the more precise Total pH scale,a s recommended by Pimenta
+Scale, not on the more precise Total pH scale, as recommended by Pimenta
 and Greer 2018 (and many other references).
 
 > Pimenta, A. AND J. Grear. Guidelines for Measuring Changes in Seawater
@@ -30,8 +31,9 @@ and Greer 2018 (and many other references).
 > Washington, DC, EPA/600/R-17/483, 2018.
 
 Several references, however, suggest that for situations with
-substantial differences in pCO<sub>2</sub>, the potentiometric approach
-using a glass electrode can provide adequate precision.
+substantial differences in pCO<sub>2</sub>, such as estuarine
+environmetns, the potentiometric approach using a glass electrode can
+provide adequate precision.
 
 We want to explore the impact of apparently small changes in pH
 observations, and by extension, other field measurements as collected by
@@ -55,14 +57,14 @@ library(seacarb)
 library(tidyverse)
 ```
 
-    ## -- Attaching packages ----------------------------------------------------------------------------------------------------------------- tidyverse 1.3.0 --
+    ## -- Attaching packages ---------------------------------------------------------------------- tidyverse 1.3.0 --
 
     ## v ggplot2 3.3.2     v purrr   0.3.4
-    ## v tibble  3.0.1     v dplyr   1.0.0
-    ## v tidyr   1.1.0     v stringr 1.4.0
+    ## v tibble  3.0.3     v dplyr   1.0.2
+    ## v tidyr   1.1.2     v stringr 1.4.0
     ## v readr   1.3.1     v forcats 0.5.0
 
-    ## -- Conflicts -------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts ------------------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter()  masks stats::filter()
     ## x purrr::is_null() masks testthat::is_null()
     ## x dplyr::lag()     masks stats::lag()
@@ -81,7 +83,7 @@ library(CBEPgraphics)
 load_cbep_fonts()
 ```
 
-# Systematic Exploration of error
+# Systematic Exploration of Error
 
 ## Create Mock Data
 
@@ -95,15 +97,16 @@ mock_data <- tibble(ph=ph, pco2=pco2, temp = 15, sal = 30)
 ## Calculate Carbonate Parameters
 
 ``` r
-carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph, S=mock_data$sal, T=mock_data$temp,
-     Patm=1, P=0, Pt=0, Sit=0,
-     k1k2="x", kf="x", ks="d", pHscale="T",
-     b="u74", gas="potential", 
-     warn="y", eos="eos80",
-     long=-69, lat=40)   # I don't think we need the lat and long....
+carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph, S=mock_data$sal,
+                 T=mock_data$temp,
+                 Patm=1, P=0, Pt=0, Sit=0,
+                 k1k2="x", kf="x", ks="d", pHscale="T",
+                 b="u74", gas="potential", 
+                 warn="y", eos="eos80",
+                 long=-69, lat=40)   # I don't think we need the lat and long....
 ```
 
-## Graphical Display
+## Graphical Display of Omega as a function of pH and PCO<sub>2</sub>
 
 ``` r
 ggplot(carb_data, aes(x=pH, y=pCO2, z=OmegaAragonite)) +
@@ -111,12 +114,12 @@ ggplot(carb_data, aes(x=pH, y=pCO2, z=OmegaAragonite)) +
   theme_cbep()
 ```
 
-![](Sensitivity_tests_files/figure-gfm/graphic_1-1.png)<!-- -->
-
-So, loosely speaking, an error of one tenth of a pH point can shift the
+![](Sensitivity_tests_files/figure-gfm/graphic_1-1.png)<!-- --> So,
+loosely speaking, an error of one tenth of a pH point can shift the
 estimated omega value from roughly 0.9 or 1.0 to around 1.5. To shift
-omega as far based on an error measuring pCO2, you’d need to be “off” on
-your estimate of pCO2 by around 150 uAtm.
+omega as far based on an error measuring pCO<sub>2</sub>, you’d need to
+be “off” on your estimate of pCO<sub>2</sub> by around 150 micro
+Atmospheres.
 
 # Varying Temperature and Salinity
 
@@ -126,12 +129,13 @@ sal      <- rep(seq(29, 31, 0.2), each=11)
 
 mock_data <- tibble(ph=8.0, pco2=500, temp = temp, sal = sal)
 
-carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph, S=mock_data$sal, T=mock_data$temp,
-     Patm=1, P=0, Pt=0, Sit=0,
-     k1k2="x", kf="x", ks="d", pHscale="T",
-     b="u74", gas="potential", 
-     warn="y", eos="eos80",
-     long=-69, lat=40)   # I don't think we need the lat and long....
+carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph,
+                 S=mock_data$sal, T=mock_data$temp,
+                 Patm=1, P=0, Pt=0, Sit=0,
+                 k1k2="x", kf="x", ks="d", pHscale="T",
+                 b="u74", gas="potential", 
+                 warn="y", eos="eos80",
+                 long=-69, lat=40)   # I don't think we need the lat and long....
 
 ggplot(carb_data, aes(x=T, y=S, z=OmegaAragonite)) +
   geom_contour_filled(color='white') +
@@ -143,6 +147,6 @@ the shape looks similar, the scale is quite different. Full scale here
 is only a range of 0.3, less than 1/10th the scale of impact of
 potential errors in pH.
 
-note that for a complete version of this I would need to explore the
+Note that for a complete version of this I would need to explore the
 full parameter space, rather than take selected two dimensional slices
-trough it.
+through it.

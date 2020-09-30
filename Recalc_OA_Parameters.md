@@ -9,7 +9,8 @@ Curtis C. Bohlen
   - [Calculate Carbonate Parameters](#calculate-carbonate-parameters)
       - [CBEP / SMCC Data](#cbep-smcc-data)
   - [FOCB](#focb)
-  - [Revise recalculation](#revise-recalculation)
+  - [Duplicating the Calculations Conducted by Chris Hunt of
+    UNH](#duplicating-the-calculations-conducted-by-chris-hunt-of-unh)
   - [Check CBEP Calculations in
     Python](#check-cbep-calculations-in-python)
       - [Import CBEP python results](#import-cbep-python-results)
@@ -31,10 +32,16 @@ Curtis C. Bohlen
 # Introduction
 
 In this notebook, we run calculations of the seawater carbonate systems
-from two data series in Casco Bay We want to check calculations of OA
-parameters from both FOCB and UNH, using CO2SYS or its derivatives. We
-rely principally on the R Package seacarb, but it does not provide a
-facility for working with pH measured on the NBS scale, which is what
+from two data series in Casco Bay, using a variety of methods and a
+variety of tools. The goal is to check calculations, determine how
+assumptions may affect results, and figure out how to calculate
+carbonate chemistry using the tools we have available.
+
+We will check calculations of OA parameters from both FOCB and UNH,
+using CO2SYS or, more concretely, its derivatives in Python and R.
+
+We principally explore on the R Package seacarb, but it does not provide
+a facility for working with pH measured on the NBS scale, which is what
 FOCB uses. As a result, we have also run some calculations in PyCO2SYS.
 
 We do this for limited data from summer and fall of 2016, because there
@@ -62,14 +69,14 @@ library(seacarb)
 library(tidyverse)
 ```
 
-    ## -- Attaching packages ----------------------------------------------------------------------------------------------------------------- tidyverse 1.3.0 --
+    ## -- Attaching packages ---------------------------------------------------------------------- tidyverse 1.3.0 --
 
     ## v ggplot2 3.3.2     v purrr   0.3.4
-    ## v tibble  3.0.1     v dplyr   1.0.0
-    ## v tidyr   1.1.0     v stringr 1.4.0
+    ## v tibble  3.0.3     v dplyr   1.0.2
+    ## v tidyr   1.1.2     v stringr 1.4.0
     ## v readr   1.3.1     v forcats 0.5.0
 
-    ## -- Conflicts -------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts ------------------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter()  masks stats::filter()
     ## x purrr::is_null() masks testthat::is_null()
     ## x dplyr::lag()     masks stats::lag()
@@ -112,12 +119,11 @@ cbep_data <- read_excel("CascoBayOADataFALL2016.xlsx",
                                                    'Morning','Afternoon',
                                                    'Evening', 'Night')))
 
-# Using some base R code to change column content without changing order of columns
-# Tidyverse mutate(deletes and old column, and adds a new one, thus changing order.)
+# Using base R code to change column content without changing order.
+# Tidyverse mutate() deletes an old column, and adds a new one, thus changing order.)
 
 cbep_data$datetime <- cbep_data$datetime2
 # DOY is already correct
-
 cbep_data <- cbep_data[, !(names(cbep_data)== 'doy2')]
 # finally, remove data with key missing values, which appear to choke seacarb
 cbep_data <- cbep_data[! (is.na(cbep_data$pco2) | is.na(cbep_data$ph) |
@@ -141,8 +147,8 @@ focb_data <- read_excel("CMS1DataFALL2016.xlsx",
                                                    'Morning','Afternoon',
                                                    'Evening', 'Night')))
 
-# Using some base R code to change column content without changing order of columns
-# Tidyverse mutate(deletes and old column, and adds a new one, thus changing order.)
+# Using base R code to change column content without changing order.
+# Tidyverse mutate() deletes an old column, and adds a new one, thus changing order.)
 
 focb_data$doy <- focb_data$doy2
 # datetime is already correct -- but includes minutes,
@@ -160,12 +166,13 @@ focb_data <- focb_data[! (is.na(focb_data$pco2) | is.na(focb_data$ph) |
 ## CBEP / SMCC Data
 
 ``` r
-cbep <- carb(flag = 21, cbep_data$pco2, cbep_data$ph, S=cbep_data$sal, T=cbep_data$temp,
-     Patm=1, P=0, Pt=0, Sit=0,
-     k1k2="x", kf="x", ks="d", pHscale="T",
-     b="u74", gas="potential", 
-     warn="y", eos="eos80",
-     long=-69, lat=40)   # I don't think we need the lat and long....
+cbep <- carb(flag = 21, cbep_data$pco2, cbep_data$ph,
+             S=cbep_data$sal, T=cbep_data$temp,
+             Patm=1, P=0, Pt=0, Sit=0,
+             k1k2="x", kf="x", ks="d", pHscale="T",
+             b="u74", gas="potential", 
+             warn="y", eos="eos80",
+             long=-69, lat=40)   # I don't think we need the lat and long....
 
 cbep_data$newomega <- cbep$OmegaAragonite
 ```
@@ -177,56 +184,44 @@ ggplot(cbep_data, aes(omega_a, newomega)) + geom_point(color = 'grey') +
 ```
 
 ![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
-This shows a slight bias towards higher values
+This shows a slight bias towards higher values. The values we calculated
+are consistently slightly higher than the valus calculated by UNH.
 
 # FOCB
 
 According to its documentation, seacarb offers only three choices for pH
 scales, and those are “T”, for total, “F” for free, and “SWS” for sea
-water scale. I can provide the code with any other string in place of
-those three, and
+water scale.
 
-I am uncertain which scale to use, based on the NBS scale. Judging by
-Pimenta and Greer 2018, the scale is similar to total scale, with errors
-that can be as high as one tenth of a pH point. It is NOT the preferred
-approach.
+Thus seacarb can not handle the electrochemical data collected by FOCB,
+which is measured in the “NBS” scale.
+
+Judging by Pimenta and Greer 2018, the NBS scale is similar to total
+scale, but differences can be as high as one tenth of a pH point. The
+result is that any effort to use seacarb to handle FOCB’s data is
+doomed.
 
 > Pimenta, A. AND J. Grear. Guidelines for Measuring Changes in Seawater
 > pH and Associated Carbonate Chemistry in Coastal Environments of the
 > Eastern United States. U.S. EPA Office of Research and Development,
 > Washington, DC, EPA/600/R-17/483, 2018.
 
-``` r
-focb <- carb(flag = 21, focb_data$pco2, focb_data$ph, S=focb_data$sal, T=focb_data$temp,
-     Patm=1, P=0, Pt=0, Sit=0,
-     k1k2="x", kf="x", ks="d", pHscale="T",
-     b="u74", gas="potential", 
-     warn="y", eos="eos80",
-     long=-69, lat=40)   # I don't think we need the lat and long....
+We ran calculations based on seacarb, but FOCB’s reported Omega values
+were consistently much lower than what we calculated. We do not present
+the results here, because seacarbs limitations mean the calculations
+were wrong. We do not want to mislead readers by including technically
+incorrect code.
 
-focb_data$newomega <- focb$OmegaAragonite
-```
+We did calculate better values for the FOCB data using python. Results
+are given below.
 
-``` r
-ggplot(focb_data, aes(omega_a, newomega)) + geom_point(color = 'grey') +
-    geom_abline(intercept = 0, slope = 1, color = 'red')+
-  theme_cbep()
-```
-
-![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
-FOCB’s reported Omega values are consistently lower than the ones
-recalculated here with seacarb. Although I have presented the results
-using the Total pH scale, selecting the free or sea water pH scales
-makes little qualitative difference here. The Free pH scale produces
-results most similar to the FOCB results. As we will see later, this is
-because seacarb does not handle the NBS pH scale.
-
-# Revise recalculation
+# Duplicating the Calculations Conducted by Chris Hunt of UNH
 
 I received an e-mail from Chris Hunt of UNH, who ran the calculations on
-the SMCC data to determine the carbonate system parameters. describing
-how he set up his calculation of carbonate parameters using CO2SYS. he
-runs the analysis on Matlab, using the following code and settings:
+the SMCC data to determine the carbonate system parameters. In hte
+e-mail he described how he set up his calculation of carbonate
+parameters using CO2SYS. He runs the analysis on Matlab, using the
+following code and settings:
 
 ``` octave
 for i=1:length(lvl3)
@@ -240,8 +235,8 @@ for i=1:length(lvl3)
 end
 ```
 
-> where lvl3(i,7)=temperature,  
-> lvl3(i,17)=salinity, lvl3(i,27)=pCO2, lvl3(i,37)=pH.
+> where lvl3(i,7) = temperature,  
+> lvl3(i,17) = salinity, lvl3(i,27) = pCO2, lvl3(i,37) = pH.
 
 > I’m using pressure, silicate, and phosphate all equal to zero (the
 > effects of those are pretty small). \* pH data are on the Total scale
@@ -249,19 +244,20 @@ end
 > (Option 9). \* I’m using the KSO4 of Dickson and \* TB of Uppstrom
 > (Option 1).
 
-So,we can re-run the SEACARB calculations as follows:
+We can approximate Chris Hunt’s SEACARB calculations as follows:
 
 ``` r
-cbep2 <- carb(flag = 21, cbep_data$pco2, cbep_data$ph, S=cbep_data$sal, T=cbep_data$temp,
-     Patm=1, P=0, Pt=0, Sit=0,
-     k1k2="w14",                    # I'm not given the option of Cai and Wang in seacarb
-     kf="x",                      # Chris did not mention this
-     ks="d",                      # From Dixon 1990
-     pHscale="T",  
-     b="u74",                     # Uppstrom 1974
-     gas="potential", 
-     warn="y", eos="eos80",
-     long=-69, lat=40)   # I don't think we need the lat and long....
+cbep2 <- carb(flag = 21, cbep_data$pco2, cbep_data$ph,
+              S=cbep_data$sal, T=cbep_data$temp,
+              Patm=1, P=0, Pt=0, Sit=0,
+              k1k2="w14",                  # I'm not given the option of Cai and Wang in seacarb
+              kf="x",                      # Chris did not mention this
+              ks="d",                      # From Dixon 1990
+              pHscale="T",  
+              b="u74",                     # Uppstrom 1974
+              gas="potential", 
+              warn="y", eos="eos80",
+              long=-69, lat=40)   # I don't think we need the lat and long....
 
 cbep_data$newomega2 <- cbep2$OmegaAragonite
 ```
@@ -272,7 +268,7 @@ ggplot(cbep_data, aes(omega_a, newomega2)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 Since seacarb does not provide an option for the Cai and Wang 1998
 equilibrium constants, we tried all the options listed in the man pages,
@@ -280,10 +276,12 @@ to evaluate which looked most like the results provided by Chris Hunt.
 None of them provided an exact match, but several are very close (with
 only small symmetric deviations from perfect correlation).
 
-What we observed were the following: 1. No change with k1k2 = ‘x’ or
-k1k2 = ‘m10’. 2. Bias is WORSE with k1k2=‘r’. 3. The bias vanishes if we
-go with k1k2=‘m06’ or ‘w14’. 4. k1k2 = ‘mo6’ and k1.2 = ‘w14’ provide
-nearly identical results.
+What we observed were the following:
+
+1.  No change with k1k2 = ‘x’ or k1k2 = ‘m10’.  
+2.  Bias is WORSE with k1k2=‘r’.  
+3.  The bias vanishes if we go with k1k2=‘m06’ or ‘w14’.  
+4.  k1k2 = ‘mo6’ and k1k2 = ‘w14’ provide nearly identical results.
 
 # Check CBEP Calculations in Python
 
@@ -303,9 +301,9 @@ Code and results are in the ‘PyCO2SYS\_calc’ folder. The code is in
 ### Folder References
 
 ``` r
-daughterfldrnm <- 'PyCO2SYS_Calc'
-me   <- getwd()
-daughter  <- file.path(me,daughterfldrnm)
+daughter <- 'PyCO2SYS_Calc'
+#me   <- getwd()
+#daughter  <- file.path(me,daughterfldrnm)
 ```
 
 ### Load Python Data and Plot
@@ -336,9 +334,8 @@ ggplot(cbep_data, aes(omega_a, newomega3)) + geom_point(color = 'grey') +
 ```
 
 ![](Recalc_OA_Parameters_files/figure-gfm/load_cbep_python_results-1.png)<!-- -->
-
 So, even trying to repeat Chris Hunt’s Calculations EXACTLY in Python,
-produces slightly different results. That’s disturbing.
+produces slightly different results. That’s disturbing….
 
 ## Accuracy Comparisons
 
