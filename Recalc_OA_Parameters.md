@@ -2,28 +2,28 @@ Recalculating Omega from FOCB and UNH OA Data from Casco Bay
 ================
 Curtis C. Bohlen
 
-  - [Introduction](#introduction)
-  - [Install Libraries](#install-libraries)
-  - [Load Libraries](#load-libraries)
-  - [Load Data](#load-data)
-  - [Calculate Carbonate Parameters](#calculate-carbonate-parameters)
-      - [CBEP / SMCC Data](#cbep-smcc-data)
-  - [FOCB](#focb)
-  - [Duplicating the Calculations Conducted by Chris Hunt of
+-   [Introduction](#introduction)
+-   [Install Libraries](#install-libraries)
+-   [Load Libraries](#load-libraries)
+-   [Load Data](#load-data)
+-   [Calculate Carbonate Parameters](#calculate-carbonate-parameters)
+    -   [CBEP / SMCC Data](#cbep--smcc-data)
+-   [FOCB](#focb)
+-   [Duplicating the Calculations Conducted by Chris Hunt of
     UNH](#duplicating-the-calculations-conducted-by-chris-hunt-of-unh)
-  - [Check CBEP Calculations in
+-   [Check CBEP Calculations in
     Python](#check-cbep-calculations-in-python)
-      - [Import CBEP python results](#import-cbep-python-results)
-          - [Folder References](#folder-references)
-          - [Load Python Data and Plot](#load-python-data-and-plot)
-      - [Accuracy Comparisons](#accuracy-comparisons)
-  - [Use python to recalculate FOCB Omega
-    values](#use-python-to-recalculate-focb-omega-values)
-      - [Load FOCB Python Data and
+    -   [Import CBEP Python Results](#import-cbep-python-results)
+        -   [Folder References](#folder-references)
+        -   [Load Python Data and Plot](#load-python-data-and-plot)
+    -   [Accuracy Comparisons](#accuracy-comparisons)
+-   [Use Python to Recalculate FOCB Omega
+    Values](#use-python-to-recalculate-focb-omega-values)
+    -   [Load FOCB Python Data and
         Plot](#load-focb-python-data-and-plot)
-  - [Caclulate mean offset](#caclulate-mean-offset)
-  - [Linear Models](#linear-models)
-  - [Conclusions](#conclusions)
+-   [Caclulate mean offset](#caclulate-mean-offset)
+-   [Linear Models](#linear-models)
+-   [Conclusions](#conclusions)
 
 <img
     src="https://www.cascobayestuary.org/wp-content/uploads/2014/04/logo_sm.jpg"
@@ -57,45 +57,45 @@ similar.
 
 ``` r
 library(seacarb)
-```
-
-    ## Loading required package: oce
-
-    ## Loading required package: gsw
-
-    ## Loading required package: testthat
-
-``` r
+#> Warning: package 'seacarb' was built under R version 4.0.5
+#> Loading required package: oce
+#> Warning: package 'oce' was built under R version 4.0.5
+#> Loading required package: gsw
+#> Warning: package 'gsw' was built under R version 4.0.5
+#> Loading required package: sf
+#> Warning: package 'sf' was built under R version 4.0.5
+#> Linking to GEOS 3.9.1, GDAL 3.2.1, PROJ 7.2.1
+#> Loading required package: testthat
+#> Warning: package 'testthat' was built under R version 4.0.5
 library(tidyverse)
-```
-
-    ## -- Attaching packages ---------------------------------------------------------------------- tidyverse 1.3.0 --
-
-    ## v ggplot2 3.3.2     v purrr   0.3.4
-    ## v tibble  3.0.3     v dplyr   1.0.2
-    ## v tidyr   1.1.2     v stringr 1.4.0
-    ## v readr   1.3.1     v forcats 0.5.0
-
-    ## -- Conflicts ------------------------------------------------------------------------- tidyverse_conflicts() --
-    ## x dplyr::filter()  masks stats::filter()
-    ## x purrr::is_null() masks testthat::is_null()
-    ## x dplyr::lag()     masks stats::lag()
-    ## x dplyr::matches() masks tidyr::matches(), testthat::matches()
-
-``` r
+#> Warning: package 'tidyverse' was built under R version 4.0.5
+#> -- Attaching packages --------------------------------------- tidyverse 1.3.1 --
+#> v ggplot2 3.3.5     v purrr   0.3.4
+#> v tibble  3.1.4     v dplyr   1.0.7
+#> v tidyr   1.1.3     v stringr 1.4.0
+#> v readr   2.0.1     v forcats 0.5.1
+#> Warning: package 'ggplot2' was built under R version 4.0.5
+#> Warning: package 'tibble' was built under R version 4.0.5
+#> Warning: package 'tidyr' was built under R version 4.0.5
+#> Warning: package 'readr' was built under R version 4.0.5
+#> Warning: package 'dplyr' was built under R version 4.0.5
+#> Warning: package 'forcats' was built under R version 4.0.5
+#> -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+#> x readr::edition_get()   masks testthat::edition_get()
+#> x dplyr::filter()        masks stats::filter()
+#> x purrr::is_null()       masks testthat::is_null()
+#> x dplyr::lag()           masks stats::lag()
+#> x readr::local_edition() masks testthat::local_edition()
+#> x dplyr::matches()       masks tidyr::matches(), testthat::matches()
 library(readxl)
 library(readr)
 library(lubridate)
-```
-
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     date, intersect, setdiff, union
-
-``` r
+#> Warning: package 'lubridate' was built under R version 4.0.5
+#> 
+#> Attaching package: 'lubridate'
+#> The following objects are masked from 'package:base':
+#> 
+#>     date, intersect, setdiff, union
 library(CBEPgraphics)
 load_cbep_fonts()
 ```
@@ -120,7 +120,6 @@ cbep_data <- read_excel("CascoBayOADataFALL2016.xlsx",
                                                    'Evening', 'Night')))
 
 # Using base R code to change column content without changing order.
-# Tidyverse mutate() deletes an old column, and adds a new one, thus changing order.)
 
 cbep_data$datetime <- cbep_data$datetime2
 # DOY is already correct
@@ -183,7 +182,7 @@ ggplot(cbep_data, aes(omega_a, newomega)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+<img src="Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
 This shows a slight bias towards higher values. The values we calculated
 are consistently slightly higher than the valus calculated by UNH.
 
@@ -218,7 +217,7 @@ are given below.
 # Duplicating the Calculations Conducted by Chris Hunt of UNH
 
 I received an e-mail from Chris Hunt of UNH, who ran the calculations on
-the SMCC data to determine the carbonate system parameters. In hte
+the SMCC data to determine the carbonate system parameters. In the
 e-mail he described how he set up his calculation of carbonate
 parameters using CO2SYS. He runs the analysis on Matlab, using the
 following code and settings:
@@ -244,7 +243,7 @@ end
 > (Option 9). \* I’m using the KSO4 of Dickson and \* TB of Uppstrom
 > (Option 1).
 
-We can approximate Chris Hunt’s SEACARB calculations as follows:
+We can approximate Chris Hunt’s calculation in SEACARB as follows:
 
 ``` r
 cbep2 <- carb(flag = 21, cbep_data$pco2, cbep_data$ph,
@@ -268,7 +267,7 @@ ggplot(cbep_data, aes(omega_a, newomega2)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+<img src="Recalc_OA_Parameters_files/figure-gfm/unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
 
 Since seacarb does not provide an option for the Cai and Wang 1998
 equilibrium constants, we tried all the options listed in the man pages,
@@ -296,7 +295,7 @@ We also ran similar calculations in PyCO2SYS version 1.4.1 in Python
 Code and results are in the ‘PyCO2SYS\_calc’ folder. The code is in
 ‘quickcarbonatechem.py’ and results are in ‘co2sys\_out.csv’.
 
-## Import CBEP python results
+## Import CBEP Python Results
 
 ### Folder References
 
@@ -313,17 +312,13 @@ fn <- 'cbepco2sys_out.csv'
 fpath = file.path(daughter, fn)
 
 pyres <- read_csv(fpath)
-```
-
-    ## Parsed with column specification:
-    ## cols(
-    ##   omega_a = col_double(),
-    ##   omega_c = col_double(),
-    ##   ta = col_double(),
-    ##   dic = col_double()
-    ## )
-
-``` r
+#> Rows: 3103 Columns: 4
+#> -- Column specification --------------------------------------------------------
+#> Delimiter: ","
+#> dbl (4): omega_a, omega_c, ta, dic
+#> 
+#> i Use `spec()` to retrieve the full column specification for this data.
+#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
 pyres <- pyres[complete.cases(pyres),]
 
 cbep_data$newomega3 <- pyres$omega_a
@@ -333,7 +328,7 @@ ggplot(cbep_data, aes(omega_a, newomega3)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/load_cbep_python_results-1.png)<!-- -->
+<img src="Recalc_OA_Parameters_files/figure-gfm/load_cbep_python_results-1.png" style="display: block; margin: auto;" />
 So, even trying to repeat Chris Hunt’s Calculations EXACTLY in Python,
 produces slightly different results. That’s disturbing….
 
@@ -341,15 +336,14 @@ produces slightly different results. That’s disturbing….
 
 ``` r
 cor(cbep_data[,c('omega_c', 'newomega', 'newomega2', 'newomega3')])
+#>             omega_c  newomega newomega2 newomega3
+#> omega_c   1.0000000 0.9995345 0.9996042 0.9996504
+#> newomega  0.9995345 1.0000000 0.9999748 0.9996872
+#> newomega2 0.9996042 0.9999748 1.0000000 0.9997974
+#> newomega3 0.9996504 0.9996872 0.9997974 1.0000000
 ```
 
-    ##             omega_c  newomega newomega2 newomega3
-    ## omega_c   1.0000000 0.9995345 0.9996042 0.9996504
-    ## newomega  0.9995345 1.0000000 0.9999748 0.9996872
-    ## newomega2 0.9996042 0.9999748 1.0000000 0.9997974
-    ## newomega3 0.9996504 0.9996872 0.9997974 1.0000000
-
-So, measured by CORRELATON, Chris’s values and the values calculated by
+So, measured by CORRELATION, Chris’s values and the values calculated by
 the python code are most similar. Looking at the graphic, however, it is
 clear there is bias to the results especially at higher values. That
 bias would not be picked up in a correlation statistic. For that we need
@@ -359,12 +353,13 @@ root mean squared error.
 test <- cbep_data %>%
   select(omega_a, newomega, newomega2, newomega3)  %>%
   summarize_all(~sqrt(mean((.-omega_a)^2, na.rm=TRUE)))
-knitr::kable(test)
+test2 <- as.vector(test, mode = 'numeric')
+names(test2) <- names(test)
+test2
+#>   omega_a  newomega newomega2 newomega3 
+#>  0.000000  1.758431  1.716543  1.765699
+rm(test, test2)
 ```
-
-| omega\_a | newomega | newomega2 | newomega3 |
-| -------: | -------: | --------: | --------: |
-|        0 | 1.758431 |  1.716543 |  1.765699 |
 
 So, our best fit with the values sent to us by Chris Hunt use K1K2
 parameters = ‘w14’ or nearly equivalently, ‘m06’ (not shown). That
@@ -372,7 +367,7 @@ leaves me wondering if Chris actually used the parameters he thinks he
 did, or if there is some other factor at work here, calculating values
 using (slightly) different software on different computers.
 
-# Use python to recalculate FOCB Omega values
+# Use Python to Recalculate FOCB Omega Values
 
 ### Load FOCB Python Data and Plot
 
@@ -381,18 +376,13 @@ fn <- 'focbco2sys_out.csv'
 fpath = file.path(daughter, fn)
 
 pyres <- read_csv(fpath)
-```
-
-    ## Parsed with column specification:
-    ## cols(
-    ##   omega_a = col_double(),
-    ##   omega_c = col_double(),
-    ##   ta = col_double(),
-    ##   dic = col_double(),
-    ##   ph_tot = col_double()
-    ## )
-
-``` r
+#> Rows: 3949 Columns: 5
+#> -- Column specification --------------------------------------------------------
+#> Delimiter: ","
+#> dbl (5): omega_a, omega_c, ta, dic, ph_tot
+#> 
+#> i Use `spec()` to retrieve the full column specification for this data.
+#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
 pyres <- pyres[complete.cases(pyres),]
 
 focb_data$newomega3 <- pyres$omega_a
@@ -403,7 +393,7 @@ ggplot(focb_data, aes(omega_a, newomega3)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/focb_python_results-1.png)<!-- -->
+<img src="Recalc_OA_Parameters_files/figure-gfm/focb_python_results-1.png" style="display: block; margin: auto;" />
 
 So, That explains the VERY different results we got when we tried the
 different pH scales. Just as with the results we found with Chris’s
@@ -425,7 +415,7 @@ ggplot(focb_data, aes(ph, ph_tot)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-![](Recalc_OA_Parameters_files/figure-gfm/focb_python_results_ph-1.png)<!-- -->
+<img src="Recalc_OA_Parameters_files/figure-gfm/focb_python_results_ph-1.png" style="display: block; margin: auto;" />
 Interesting. This shows a (nearly) linear offset of pH values. Estimated
 pH values on the Total pH scale are about 0.125 of a pH point lower than
 pH measured on the NBS scale.
@@ -436,32 +426,25 @@ pH measured on the NBS scale.
 test <- focb_data %>%
   select(ph, ph_tot)  %>%
   mutate(diff = ph_tot - ph) %>%
-  summarize(meandif = mean(diff, na.rm=TRUE))
-knitr::kable(test)
+  summarize(meandif = mean(diff, na.rm=TRUE)) %>%
+  pull(meandif)
+test
+#> [1] -0.1208048
 ```
-
-|     meandif |
-| ----------: |
-| \-0.1208048 |
 
 # Linear Models
 
 ``` r
 ph_lm <- lm(ph_tot~ ph, data = focb_data)
 summary(ph_lm)$coefficients
-```
-
-    ##               Estimate  Std. Error  t value     Pr(>|t|)
-    ## (Intercept) -0.2181984 0.013639190 -15.9979 5.807015e-55
-    ## ph           1.0121372 0.001699665 595.4923 0.000000e+00
-
-``` r
+#>               Estimate  Std. Error  t value     Pr(>|t|)
+#> (Intercept) -0.2181984 0.013639190 -15.9979 5.807015e-55
+#> ph           1.0121372 0.001699665 595.4923 0.000000e+00
 ph_lm_0 <- lm(ph_tot~ ph + 0, data = focb_data)
 summary(ph_lm_0)$coefficients
+#>     Estimate   Std. Error  t value Pr(>|t|)
+#> ph 0.9849471 1.473387e-05 66849.18        0
 ```
-
-    ##     Estimate   Std. Error  t value Pr(>|t|)
-    ## ph 0.9849471 1.473387e-05 66849.18        0
 
 So, basic slope is close to 1, not indistinguishably different from one
 on these data, either with or without an intercept.
@@ -476,41 +459,36 @@ phcentered    <- scale(focb_data$ph,     scale=FALSE)
 phtotcentered <- scale(focb_data$ph_tot, scale=FALSE)
 ph_lm_c <- lm(focb_data$ph_tot~ phcentered)
 coef(ph_lm_c)[1] - mnph
-```
-
-    ## (Intercept) 
-    ##  -0.1208048
-
-``` r
+#> (Intercept) 
+#>  -0.1208048
 mnphtot-mnph
+#> [1] -0.1208048
 ```
-
-    ## [1] -0.1208048
 
 So the two approaches both provide identical estimates of the offset
 
 # Conclusions
 
 What I found is this:  
-1\. FOCB and UNH are making slightly different assumptions about the
+1. FOCB and UNH are making slightly different assumptions about the
 equilibrium constants. Those different assumptions make a tiny
 difference in results, but not enough to worry about.
 
-2.  Even using identical parameter settings in different versions of
+1.  Even using identical parameter settings in different versions of
     CO2SYS, we don’t get identical results; each program, maybe each
     computer, produces very slightly different values (again, not enough
-    to worry about, but it makes error checking difficult\!).
+    to worry about, but it makes error checking difficult!).
 
-3.  The selection of the correct pH scale makes a HUGE difference in
+2.  The selection of the correct pH scale makes a HUGE difference in
     Omega estimates (on the order of 30%).
 
-4.  CO2SYS offers the option to output an estimated pH in different pH
+3.  CO2SYS offers the option to output an estimated pH in different pH
     scales. When I used that facility (in Python) to calculate the pH
     FOCB “would have seen” had they been using a Total pH scale, the
     estimated pH is almost exactly 0.12 pH units lower than what FOCB
     reported directly.
 
-5.  That difference is enough to “explain” how FOCB could have lower
+4.  That difference is enough to “explain” how FOCB could have lower
     pCO2 and higher pH at Cousins Island, but still show significantly
     lower estimated Omega values. A difference in estimated pH of 0.1 pH
     units can change estimated omega by around 0.5 or 0.6.

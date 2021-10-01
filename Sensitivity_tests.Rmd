@@ -1,11 +1,11 @@
 ---
-title: "CO2 System Error Propogation"
+title: "CO2 System Error Propagation"
 author: Curtis C. Bohlen
 output:
   github_document:
     toc: true
-    fig_width: 7
-    fig_height: 5
+    fig_width: 5
+    fig_height: 4
 ---
 
 <img
@@ -13,15 +13,17 @@ output:
     style="position:absolute;top:10px;right:50px;" />
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.align = 'center',
+                      fig.width = 5, fig.height = 4,
+                      collapse = TRUE, comment = "#>")
 ```
 
 # Introduction
-
 Friends of Casco Bay uses less accurate electrochemical pH sensors, rather than
 the more expensive Field Effect Transistor sensors or colorimetric pH
-technology. As a result, they measure pH in NBS pH Scale, not on the more
-precise Total pH scale, as recommended by Pimenta and Greer 2018 (and many other
+technology. As a result, they measure pH in NBS pH Scale, not on the Total pH 
+scale, which is recommended by Pimenta and Greer 2018 (and many other 
 references).
 
 > Pimenta, A. AND J. Grear. Guidelines for Measuring Changes in Seawater
@@ -30,7 +32,7 @@ references).
 > Washington, DC, EPA/600/R-17/483, 2018. 
 
 Several references, however, suggest that for situations with substantial
-differences in pCO~2~, such as estuarine environmetns, the potentiometric
+differences in pCO~2~, such as estuarine environments, the potentiometric
 approach using a glass electrode can provide adequate precision.
 
 We want to explore the impact of apparently small changes in pH observations,
@@ -72,10 +74,11 @@ carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph, S=mock_data$sal,
 ```
 
 ## Graphical Display of Omega as a function of pH and PCO~2~
-```{r graphic_1}
+```{r graphic_1, fig.width = 5.5}
 ggplot(carb_data, aes(x=pH, y=pCO2, z=OmegaAragonite)) +
-  geom_contour_filled(color='white') +
-  theme_cbep()
+  geom_contour_filled(color='white', breaks = seq(0,4, 0.2)) +
+  scale_fill_viridis_d(name = 'Omega') +
+  theme_cbep(base_size = 12)
 ```
 So, loosely speaking, an error of one tenth of a pH point can shift the
 estimated omega value from roughly 0.9 or 1.0 to around 1.5.  To shift omega as
@@ -83,7 +86,7 @@ far based on an error measuring pCO~2~, you'd need to be "off" on your estimate
 of pCO~2~ by around 150 micro Atmospheres.
 
 # Varying Temperature and Salinity
-```{r graphic_2}
+```{r}
 temp        <- rep(seq(14, 16, 0.2), times =11)
 sal      <- rep(seq(29, 31, 0.2), each=11)
 
@@ -96,10 +99,20 @@ carb_data = carb(flag = 21, mock_data$pco2, mock_data$ph,
                  b="u74", gas="potential", 
                  warn="y", eos="eos80",
                  long=-69, lat=40)   # I don't think we need the lat and long....
+```
 
+```{r}
+v <- viridis(14)
+v[c(7,8)]
+```
+
+```{r graphic_2, fig.width = 4.4}
 ggplot(carb_data, aes(x=T, y=S, z=OmegaAragonite)) +
-  geom_contour_filled(color='white') +
-  theme_cbep()
+  geom_contour_filled(breaks = seq(0,4, 0.2)) +
+  geom_contour(color='white') +
+  scale_fill_manual(name = 'Omega', values = v[c(7,8)]) +
+  theme_cbep(base_size = 12) +
+  theme(legend.position = 'none')
 ```
 While the shape looks similar, the scale is quite different.  Full scale here is
 only a range of 0.3, less than 1/10th the scale of impact of potential errors in
@@ -107,5 +120,6 @@ pH.
 
 Note that for a complete version of this I would need to explore the full
 parameter space, rather than take selected two dimensional slices through it.
+
 
 

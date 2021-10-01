@@ -4,8 +4,8 @@ author: Curtis C. Bohlen
 output:
   github_document:
     toc: true
-    fig_width: 7
-    fig_height: 5
+    fig_width: 5
+    fig_height: 4
 ---
 
 <img
@@ -13,7 +13,10 @@ output:
     style="position:absolute;top:10px;right:50px;" />
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.align = 'center',
+                      fig.width = 5, fig.height = 4,
+                      collapse = TRUE, comment = "#>")
 ```
 
 # Introduction
@@ -71,7 +74,6 @@ cbep_data <- read_excel("CascoBayOADataFALL2016.xlsx",
                                                    'Evening', 'Night')))
 
 # Using base R code to change column content without changing order.
-# Tidyverse mutate() deletes an old column, and adds a new one, thus changing order.)
 
 cbep_data$datetime <- cbep_data$datetime2
 # DOY is already correct
@@ -164,7 +166,7 @@ given below.
 
 #  Duplicating the Calculations Conducted by Chris Hunt of UNH
 I received an e-mail from Chris Hunt of UNH, who ran the calculations on the
-SMCC data to determine the carbonate system parameters. In hte e-mail he 
+SMCC data to determine the carbonate system parameters. In the e-mail he 
 described how he set up his calculation of carbonate parameters using CO2SYS.
 He runs the analysis on Matlab, using the following code and settings:
 
@@ -191,7 +193,7 @@ end
  * I'm using the KSO4 of Dickson and
  * TB of Uppstrom (Option 1).
 
-We can approximate Chris Hunt's SEACARB calculations as follows:
+We can approximate Chris Hunt's calculation in SEACARB as follows:
 ```{r}
 cbep2 <- carb(flag = 21, cbep_data$pco2, cbep_data$ph,
               S=cbep_data$sal, T=cbep_data$temp,
@@ -242,7 +244,7 @@ We also ran similar calculations in PyCO2SYS version 1.4.1 in Python 3.77
 Code and results are in the 'PyCO2SYS_calc' folder.  The code is in 
 'quickcarbonatechem.py' and results are in 'co2sys_out.csv'.
 
-## Import CBEP python results
+## Import CBEP Python Results
 ### Folder References
 ```{r folder_references}
 daughter <- 'PyCO2SYS_Calc'
@@ -272,23 +274,29 @@ slightly different results.  That's disturbing....
 ```{r}
 cor(cbep_data[,c('omega_c', 'newomega', 'newomega2', 'newomega3')])
 ```
-So, measured by CORRELATON, Chris's values and the values calculated by the
+So, measured by CORRELATION, Chris's values and the values calculated by the
 python code are most similar. Looking at the graphic, however, it is clear there
 is bias to the results especially at higher values.  That bias would not be
 picked up in a correlation statistic.  For that we need root mean squared error.
-
 
 ```{r}
 test <- cbep_data %>%
   select(omega_a, newomega, newomega2, newomega3)  %>%
   summarize_all(~sqrt(mean((.-omega_a)^2, na.rm=TRUE)))
-knitr::kable(test)
+test2 <- as.vector(test, mode = 'numeric')
+names(test2) <- names(test)
+test2
+rm(test, test2)
 ```
 
-So, our best fit with the values sent to us by Chris Hunt use K1K2 parameters = 'w14' or nearly equivalently,  'm06' (not shown).  That leaves me wondering if Chris actually used the parameters he thinks he did, or if there is some other factor at work here, calculating values using (slightly) different software on different computers.
+So, our best fit with the values sent to us by Chris Hunt use K1K2 parameters =
+'w14' or nearly equivalently,  'm06' (not shown).  That leaves me wondering if
+Chris actually used the parameters he thinks he did, or if there is some other
+factor at work here, calculating values using (slightly) different software on
+different computers.
 
 
-# Use python to recalculate FOCB Omega values
+# Use Python to Recalculate FOCB Omega Values
 ### Load FOCB Python Data and Plot
 ```{r focb_python_results}
 fn <- 'focbco2sys_out.csv'
@@ -305,18 +313,26 @@ ggplot(focb_data, aes(omega_a, newomega3)) + geom_point(color = 'grey') +
   theme_cbep()
 ```
 
-So, That explains the VERY different results we got when we tried the different pH scales.  Just as with the results we found with Chris's calculations, our results are not identical to what FOCB submitted to us.  We might be able to get a closer match if we switched to using different K1 and K2 constants. 
+So, That explains the VERY different results we got when we tried the different
+pH scales.  Just as with the results we found with Chris's calculations, our
+results are not identical to what FOCB submitted to us.  We might be able to get
+a closer match if we switched to using different K1 and K2 constants.
 
-So, the problem is not is inconsistent calculations, the problem lies in using different pH scales, which are surprisingly incommensurate.
+So, the problem is not is inconsistent calculations, the problem lies in using 
+different pH scales, which are surprisingly incommensurate.
 
-We would like to reframe FOCB's observed pH in terms of total pH to facilitate comparisons with the UNH data.  We modified the Python script slightly to add an estimated pH value on the total scale, again using PyCO2SYS.
+We would like to reframe FOCB's observed pH in terms of total pH to facilitate
+comparisons with the UNH data.  We modified the Python script slightly to add an
+estimated pH value on the total scale, again using PyCO2SYS.
 
 ```{r focb_python_results_ph}
 ggplot(focb_data, aes(ph, ph_tot)) + geom_point(color = 'grey') +
   geom_abline(intercept = 0, slope = 1, color = 'red') +
   theme_cbep()
 ```
-Interesting.  This shows a (nearly) linear offset of pH values.  Estimated pH values on the Total pH scale are about 0.125 of a pH point lower than pH measured on the NBS scale.
+Interesting.  This shows a (nearly) linear offset of pH values.  Estimated pH
+values on the Total pH scale are about 0.125 of a pH point lower than pH
+measured on the NBS scale.
 
 
 # Caclulate mean offset
@@ -324,9 +340,11 @@ Interesting.  This shows a (nearly) linear offset of pH values.  Estimated pH va
 test <- focb_data %>%
   select(ph, ph_tot)  %>%
   mutate(diff = ph_tot - ph) %>%
-  summarize(meandif = mean(diff, na.rm=TRUE))
-knitr::kable(test)
+  summarize(meandif = mean(diff, na.rm=TRUE)) %>%
+  pull(meandif)
+test
 ```
+
 # Linear Models
 ```{r linear_models}
 ph_lm <- lm(ph_tot~ ph, data = focb_data)
@@ -334,9 +352,11 @@ summary(ph_lm)$coefficients
 ph_lm_0 <- lm(ph_tot~ ph + 0, data = focb_data)
 summary(ph_lm_0)$coefficients
 ```
-So, basic slope is close to 1,  not indistinguishably different from one on these data, either with or without an intercept.  
+So, basic slope is close to 1,  not indistinguishably different from one on 
+these data, either with or without an intercept.  
 
-Lets get a more robust estimate of the offset, by centering the data on the x axis, here he NBS pH observations.
+Lets get a more robust estimate of the offset, by centering the data on the x 
+axis, here he NBS pH observations.
 
 ```{r centered_linear_models}
 mnph    <- mean(focb_data$ph, na.rm=TRUE)
@@ -351,14 +371,26 @@ So the two approaches both provide identical estimates of the offset
 
 # Conclusions
 What I found is this:  
-1.  FOCB and UNH are making slightly different assumptions about the equilibrium constants. Those different assumptions make a tiny difference in results, but not enough to worry about.  
+1.  FOCB and UNH are making slightly different assumptions about the equilibrium
+constants. Those different assumptions make a tiny difference in results, but
+not enough to worry about.
 
-2.  Even using identical parameter settings in different versions of CO2SYS, we don't get identical results; each program, maybe each computer, produces very slightly different values (again, not enough to worry about, but it makes error checking difficult!).  
+2.  Even using identical parameter settings in different versions of CO2SYS, we
+don't get identical results; each program, maybe each computer, produces very
+slightly different values (again, not enough to worry about, but it makes error
+checking difficult!).
 
-3. The selection of the correct pH scale makes a HUGE difference in Omega estimates (on the order of 30%).
+3. The selection of the correct pH scale makes a HUGE difference in Omega 
+estimates (on the order of 30%).
 
-4.  CO2SYS offers the option to output an estimated pH in different pH scales. When I used that facility (in Python) to calculate the pH FOCB "would have seen" had they  been using a Total pH scale, the estimated pH is almost exactly 0.12 pH units lower than what FOCB reported directly.
+4.  CO2SYS offers the option to output an estimated pH in different pH scales.
+When I used that facility (in Python) to calculate the pH FOCB "would have seen"
+had they  been using a Total pH scale, the estimated pH is almost exactly 0.12
+pH units lower than what FOCB reported directly.
 
-5. That difference is enough to "explain" how FOCB could have lower pCO2 and higher pH at Cousins Island, but still show significantly lower estimated Omega values. A difference in estimated pH of 0.1 pH units can change estimated omega by around 0.5 or 0.6.
+5. That difference is enough to "explain" how FOCB could have lower pCO2 and
+higher pH at Cousins Island, but still show significantly lower estimated Omega
+values. A difference in estimated pH of 0.1 pH units can change estimated omega
+by around 0.5 or 0.6.
 
 
