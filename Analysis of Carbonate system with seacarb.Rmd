@@ -2,7 +2,7 @@
 title: "Calculating Carbonate Components from Casco Bay Data Using seacarb"
 author: Curtis C. Bohlen
 output: 
-  html_document:
+  github_document:
     toc: true
     fig_width: 5
     fig_height: 4
